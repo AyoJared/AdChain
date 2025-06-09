@@ -15,11 +15,11 @@ import net.corda.core.flows.FlowSession
 
 import net.corda.core.identity.Party
 
-import com.template.contracts.TemplateContract
+import com.template.contracts.AdContract
+import com.template.states.AdState
 
 import net.corda.core.transactions.TransactionBuilder
 
-import com.template.states.TemplateState
 import net.corda.core.contracts.requireThat
 import net.corda.core.identity.AbstractParty
 
@@ -29,13 +29,11 @@ import net.corda.core.identity.AbstractParty
 // *********
 @InitiatingFlow
 @StartableByRPC
-class Initiator(private val receiver: Party) : FlowLogic<SignedTransaction>() {
+class CreateAdFlow(private val receiver: Party) : FlowLogic<SignedTransaction>() {
     override val progressTracker = ProgressTracker()
 
     @Suspendable
     override fun call(): SignedTransaction {
-        //Hello World message
-        val msg = "Hello-World"
         val sender = ourIdentity
 
         // Step 1. Get a reference to the notary service on our network and our key pair.
@@ -43,11 +41,16 @@ class Initiator(private val receiver: Party) : FlowLogic<SignedTransaction>() {
         val notary = serviceHub.networkMapCache.notaryIdentities[0]
 
         //Compose the State that carries the Hello World message
-        val output = TemplateState(msg, sender, receiver)
+        val output = AdState(
+                advertiser = sender,
+                publisher = receiver,
+                adDescription = description,
+                budget = budget,
+        )
 
         // Step 3. Create a new TransactionBuilder object.
         val builder = TransactionBuilder(notary)
-                .addCommand(TemplateContract.Commands.Create(), listOf(sender.owningKey, receiver.owningKey))
+                .addCommand(AdContract.Commands.Create(), listOf(sender.owningKey, receiver.owningKey))
                 .addOutputState(output)
 
         // Step 4. Verify and sign it with our KeyPair.
@@ -67,7 +70,7 @@ class Initiator(private val receiver: Party) : FlowLogic<SignedTransaction>() {
     }
 }
 
-@InitiatedBy(Initiator::class)
+@InitiatedBy(CreateAdFlow::class)
 class Responder(val counterpartySession: FlowSession) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
